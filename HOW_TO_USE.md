@@ -57,6 +57,53 @@ claude
 
 ---
 
+## Automated Workflow
+
+The preferred workflow for each round uses Playwright MCP to drive the browser automatically.
+
+### Prerequisites
+
+- **Node.js** installed (`node --version`) — required for `npx @playwright/mcp`
+- **Credentials** — fill in `cesim/.env` once:
+  ```
+  CESIM_URL=https://...
+  CESIM_EMAIL=your@email.com
+  CESIM_PASSWORD=yourpassword
+  CESIM_TEAM=Blue
+  ```
+- That's it — Playwright installs itself on first use via `npx`
+
+### Usage
+
+Start Claude Code from the `cesim/` root (so it picks up `.claude/settings.json`):
+
+```bash
+cd /path/to/cesim
+claude
+```
+
+Then say:
+
+```
+run round 3
+```
+
+Claude will:
+1. Login to Cesim using credentials from `.env`
+2. Download the results Excel to `results/`
+3. Run all analysis scripts
+4. Navigate each decision page and extract editable fields
+5. Generate a full decision plan
+6. **Pause and ask for your approval** before submitting anything
+
+Decisions are never submitted without your explicit confirmation.
+
+### Fallback
+
+The manual workflow (Steps 1–5 below) remains available if automation is unavailable or you prefer manual control.
+
+---
+
 ## Each Round: Step by Step
 
 ### Step 1 — Download Results Excel

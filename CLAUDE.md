@@ -55,3 +55,41 @@ Output: Markdown reports in `../analysis/`.
 - **Team name mapping**: Team names map to color codes (e.g., `'Blue'`) via `TEAM_NAME_MAPPING` in `analyze_comprehensive_v3.py`.
 - **Financial thresholds**: Configured as constants at the top of `analyze_comprehensive_v3.py` (cash reserves, debt ratios, EBITDA margins) — these follow Chapter 7 of the methodology doc.
 - **Round detection**: Auto-scans for files matching `ir00`, `prXX`, `rXX` patterns up to 100 rounds.
+
+## Automation
+
+Playwright MCP is configured in `.claude/settings.json` — no install steps needed. It launches on demand via `npx`.
+
+### Credentials
+
+Read credentials from `.env` at the repo root:
+
+```bash
+cat .env
+```
+
+Never print the password value in conversation output.
+
+### Routine: "run round N"
+
+When the user says **"run round N"** (or similar), execute this full flow:
+
+1. Read `.env` for `CESIM_URL`, `CESIM_EMAIL`, `CESIM_PASSWORD`, `CESIM_TEAM`.
+2. **Playwright**: navigate to `CESIM_URL` → login with credentials.
+3. **Playwright**: go to the results download page → download the Excel file to `results/`.
+4. **Bash**: run analysis scripts from `cesimAnalyze/`:
+   ```bash
+   uv run python cesimAnalyze/scripts/analyze_comprehensive_v3.py --input-dir results --output-dir analysis
+   uv run python cesimAnalyze/scripts/analyze_team_detail.py --team-name "$CESIM_TEAM" --input-dir results --output-dir analysis
+   uv run python cesimAnalyze/scripts/generate_gap_analysis.py --target-team "$CESIM_TEAM" --input-dir results --output-dir analysis
+   ```
+5. **Playwright**: navigate to each decision page (demand, production, pricing, marketing, R&D, logistics, tax, finance) → extract all editable field names and current values. No MHTML export needed.
+6. **Claude**: generate the full decision plan using the loaded prompts and analysis reports.
+7. **PAUSE**: present the plan to the user and ask for approval or edits. Do not proceed to submission without explicit user confirmation.
+8. **Playwright**: fill approved values into each decision page → submit.
+
+### Notes
+
+- The MHTML manual export workflow (old Steps 3–4) is superseded by live browser reading via Playwright. MHTML files are no longer needed.
+- Always pause before submitting decisions — the user must review and approve first.
+- Run scripts from the `cesim/` root directory (not from `cesimAnalyze/`).
