@@ -39,6 +39,24 @@ uv run python scripts/analyze_comprehensive_v3.py --input-dir ../results --outpu
 
 ---
 
+## LLM Provider: Claude Code
+
+Steps 3 and 4 use **Claude Code** as the LLM. It must be started from the `cesim/` root so it picks up `CLAUDE.md`:
+
+```bash
+cd /path/to/cesim
+claude
+```
+
+`CLAUDE.md` automatically loads both prompts and the methodology doc as context — no manual prompt pasting needed. Reference local files in conversation using `@` syntax:
+
+```
+@analysis/comprehensive_analysis_r01.md summarize the financial health
+@mhtml/round01_demand.mhtml parse this page
+```
+
+---
+
 ## Each Round: Step by Step
 
 ### Step 1 — Download Results Excel
@@ -77,13 +95,15 @@ Wait for it to complete before moving to the next step.
 
 In Cesim, navigate to each decision page (demand, production, pricing, marketing, R&D, logistics, tax, finance). Use your browser's **Save as MHTML** (or "Save as Webpage, Single File") to export each page.
 
-Then feed each MHTML file to an LLM using the prompt in:
+Then parse each file in Claude Code (the parsing prompt is already loaded via `CLAUDE.md`):
 
 ```
-cesimAnalyze/docs/prompts/mhtml_page_parsing_prompt.md
+@mhtml/round01_demand.mhtml parse this page
 ```
 
-The prompt instructs the LLM to:
+Replace the path with wherever you saved the file. Alternatively, paste the MHTML content directly into the chat and ask Claude to parse it.
+
+Claude will:
 1. Decode the MHTML content
 2. Identify the page type
 3. Extract all editable decision fields
@@ -95,16 +115,26 @@ Save the structured output — you will use it in Step 4.
 
 ### Step 4 — Generate the Decision Plan
 
-Feed the following into an LLM using the prompt in `cesimAnalyze/docs/prompts/decision_making_prompt.md`:
+In Claude Code (the decision-making prompt is already loaded via `CLAUDE.md`), reference the analysis reports with `@` syntax and ask for the plan:
 
-| Input | Source |
+```
+@analysis/comprehensive_analysis_r01.md generate the decision plan for round 2
+```
+
+Include optional deep-dive reports for richer input:
+
+```
+@analysis/comprehensive_analysis_r01.md @analysis/team_detail_Blue_r01.md @analysis/gap_analysis_Blue_r01.md generate the decision plan for round 2
+```
+
+| Input | How to reference |
 |---|---|
-| Comprehensive analysis report | `../analysis/` (from Step 2) |
-| Parsed MHTML page reports | Output from Step 3 |
-| Team detail report (optional) | See Optional Deep-Dives below |
-| Gap analysis report (optional) | See Optional Deep-Dives below |
+| Comprehensive analysis report | `@analysis/comprehensive_analysis_rXX.md` |
+| Parsed MHTML page reports | Paste output from Step 3 into the conversation |
+| Team detail report (optional) | `@analysis/team_detail_Blue_rXX.md` |
+| Gap analysis report (optional) | `@analysis/gap_analysis_Blue_rXX.md` |
 
-The prompt instructs the LLM to produce:
+Claude will produce:
 1. Executive summary and current status diagnosis
 2. Strategic mode (defensive / balanced / expansion)
 3. Complete decision table with numeric values for every field
