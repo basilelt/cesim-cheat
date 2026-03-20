@@ -29,21 +29,21 @@ def read_excel_data(file_path, team_row_idx=4, data_start_row=5):
 
     # Read data rows.
     data_df = df.iloc[data_start_row:].copy()
-    data_df.columns = ['指标'] + teams + ['Unnamed'] * (len(data_df.columns) - len(teams) - 1)
+    data_df.columns = ['\u6307\u6807'] + teams + ['Unnamed'] * (len(data_df.columns) - len(teams) - 1)
 
     # Build metric dictionary.
     metrics_dict = {}
-    # Track section context (for example: "损益表, 千 USD, 全球").
+    # Track section context (for example: "\u635F\u76CA\u8868, \u5343 USD, \u5168\u7403").
     current_section = None
 
     for _, row in data_df.iterrows():
-        indicator = str(row['指标']).strip() if pd.notna(row['指标']) else ''
+        indicator = str(row['\u6307\u6807']).strip() if pd.notna(row['\u6307\u6807']) else ''
 
         if indicator == '' or indicator == 'nan':
             continue
 
         # Detect section header rows.
-        if '损益表' in indicator or '资产负债表' in indicator:
+        if '\u635F\u76CA\u8868' in indicator or '\u8D44\u4EA7\u8D1F\u503A\u8868' in indicator:
             current_section = indicator
             continue
 
@@ -77,12 +77,12 @@ def read_excel_data(file_path, team_row_idx=4, data_start_row=5):
                     new_val = team_data.get(team)
                     if existing_val is not None and new_val is not None:
                         # For EBITDA-like metrics, prefer larger absolute values (global totals).
-                        if 'EBITDA' in indicator or '息税折旧' in indicator:
+                        if 'EBITDA' in indicator or '\u606F\u7A0E\u6298\u65E7' in indicator:
                             if (abs(new_val) > 100 and abs(existing_val) < 100) or abs(new_val) > abs(existing_val) * 2:
                                 existing_data[team] = new_val
                         else:
                             # For other metrics, prefer values in a global section.
-                            if current_section and '全球' in current_section:
+                            if current_section and '\u5168\u7403' in current_section:
                                 existing_data[team] = new_val
                     elif new_val is not None:
                         existing_data[team] = new_val
@@ -151,18 +151,18 @@ def check_excel_structure(file_path):
 
     metrics_dict, _ = read_excel_data(file_path)
 
-    regions = ['美国', '亚洲', '欧洲', 'America', 'Asia', 'Europe']
+    regions = ['\u7F8E\u56FD', '\u4E9A\u6D32', '\u6B27\u6D32', 'America', 'Asia', 'Europe']
     region_metrics = {}
     for region in regions:
         region_metrics[region] = [k for k in metrics_dict.keys() if region in str(k)]
 
-    market_keywords = ['市场', '份额', '占有率']
+    market_keywords = ['\u5E02\u573A', '\u4EFD\u989D', '\u5360\u6709\u7387']
     market_metrics = [k for k in metrics_dict.keys() if any(kw in str(k) for kw in market_keywords)]
 
-    demand_keywords = ['需求', '未满足']
+    demand_keywords = ['\u9700\u6C42', '\u672A\u6EE1\u8DB3']
     demand_metrics = [k for k in metrics_dict.keys() if any(kw in str(k) for kw in demand_keywords)]
 
-    capacity_keywords = ['产能', '利用率', '产量']
+    capacity_keywords = ['\u4EA7\u80FD', '\u5229\u7528\u7387', '\u4EA7\u91CF']
     capacity_metrics = [k for k in metrics_dict.keys() if any(kw in str(k) for kw in capacity_keywords)]
 
     return {
@@ -193,10 +193,10 @@ def diagnose_missing_data(file_path, target_metrics=None, target_team=None):
 
     if target_metrics is None:
         target_metrics = [
-            '销售额', '净利润', '现金', '权益', 'EBITDA',
-            '美国市场份额', '亚洲市场份额', '欧洲市场份额',
-            '美国未满足需求', '亚洲未满足需求', '欧洲未满足需求',
-            '美国产能利用率', '亚洲产能利用率', '欧洲产能利用率',
+            '\u9500\u552E\u989D', '\u51C0\u5229\u6DA6', '\u73B0\u91D1', '\u6743\u76CA', 'EBITDA',
+            '\u7F8E\u56FD\u5E02\u573A\u4EFD\u989D', '\u4E9A\u6D32\u5E02\u573A\u4EFD\u989D', '\u6B27\u6D32\u5E02\u573A\u4EFD\u989D',
+            '\u7F8E\u56FD\u672A\u6EE1\u8DB3\u9700\u6C42', '\u4E9A\u6D32\u672A\u6EE1\u8DB3\u9700\u6C42', '\u6B27\u6D32\u672A\u6EE1\u8DB3\u9700\u6C42',
+            '\u7F8E\u56FD\u4EA7\u80FD\u5229\u7528\u7387', '\u4E9A\u6D32\u4EA7\u80FD\u5229\u7528\u7387', '\u6B27\u6D32\u4EA7\u80FD\u5229\u7528\u7387',
         ]
 
     if target_team is None:
@@ -248,21 +248,21 @@ def get_metric_value(metrics_dict, metric_name, team_name):
                     val = metric_data.get(team_name)
                     if val is not None:
                         # For liability metrics, skip suspicious negative regional values.
-                        if '负债' in str(key) and val < 0 and '总计' not in str(key):
+                        if '\u8D1F\u503A' in str(key) and val < 0 and '\u603B\u8BA1' not in str(key):
                             continue
 
                         # For EBITDA, skip likely percentage values.
-                        if 'EBITDA' in str(key) or '息税折旧' in str(key):
+                        if 'EBITDA' in str(key) or '\u606F\u7A0E\u6298\u65E7' in str(key):
                             if abs(val) < 100:
                                 continue
 
                         priority = 0
-                        if '全球' in str(key) or '总计' in str(key):
+                        if '\u5168\u7403' in str(key) or '\u603B\u8BA1' in str(key):
                             priority = 3
-                        elif any(region in str(key) for region in ['美国', '亚洲', '欧洲', 'America', 'Asia', 'Europe']):
+                        elif any(region in str(key) for region in ['\u7F8E\u56FD', '\u4E9A\u6D32', '\u6B27\u6D32', 'America', 'Asia', 'Europe']):
                             priority = 1
 
-                        if ('EBITDA' in str(key) or '息税折旧' in str(key)) and abs(val) > 1000:
+                        if ('EBITDA' in str(key) or '\u606F\u7A0E\u6298\u65E7' in str(key)) and abs(val) > 1000:
                             priority += 2
 
                         all_matches.append((priority, abs(val), val, str(key)))
@@ -277,15 +277,15 @@ def get_metric_value(metrics_dict, metric_name, team_name):
         if metric_name in str(key) and team_name in metric_data:
             val = metric_data.get(team_name)
             if val is not None:
-                if '负债' in str(key) and val < 0 and '总计' not in str(key):
+                if '\u8D1F\u503A' in str(key) and val < 0 and '\u603B\u8BA1' not in str(key):
                     continue
-                if ('EBITDA' in str(key) or '息税折旧' in str(key)) and abs(val) < 100:
+                if ('EBITDA' in str(key) or '\u606F\u7A0E\u6298\u65E7' in str(key)) and abs(val) < 100:
                     continue
 
                 priority = 0
-                if '全球' in str(key) or '总计' in str(key):
+                if '\u5168\u7403' in str(key) or '\u603B\u8BA1' in str(key):
                     priority = 2
-                elif any(region in str(key) for region in ['美国', '亚洲', '欧洲', 'America', 'Asia', 'Europe']):
+                elif any(region in str(key) for region in ['\u7F8E\u56FD', '\u4E9A\u6D32', '\u6B27\u6D32', 'America', 'Asia', 'Europe']):
                     priority = 1
                 all_matches.append((priority, val, str(key)))
 

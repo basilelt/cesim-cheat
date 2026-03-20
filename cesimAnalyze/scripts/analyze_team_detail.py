@@ -20,11 +20,11 @@ from utils_data_analysis import (
 def get_metric_with_priority(metrics_dict, metric_name, team):
     """Get metric value using a priority list of column aliases."""
     metric_priorities = {
-        '销售额': ['销售额合计', '本地销售额', '当地销售额', '销售额'],
-        '净利润': ['本回合利润', '税后利润', '净利润'],
-        '现金': ['现金及等价物', '现金 31.12.', '现金 1.1.', '现金'],
-        '短期贷款': ['短期贷款（无计划）', '短期贷款'],
-        '长期贷款': ['长期贷款'],
+        '\u9500\u552E\u989D': ['\u9500\u552E\u989D\u5408\u8BA1', '\u672C\u5730\u9500\u552E\u989D', '\u5F53\u5730\u9500\u552E\u989D', '\u9500\u552E\u989D'],
+        '\u51C0\u5229\u6DA6': ['\u672C\u56DE\u5408\u5229\u6DA6', '\u7A0E\u540E\u5229\u6DA6', '\u51C0\u5229\u6DA6'],
+        '\u73B0\u91D1': ['\u73B0\u91D1\u53CA\u7B49\u4EF7\u7269', '\u73B0\u91D1 31.12.', '\u73B0\u91D1 1.1.', '\u73B0\u91D1'],
+        '\u77ED\u671F\u8D37\u6B3E': ['\u77ED\u671F\u8D37\u6B3E（\u65E0\u8BA1\u5212）', '\u77ED\u671F\u8D37\u6B3E'],
+        '\u957F\u671F\u8D37\u6B3E': ['\u957F\u671F\u8D37\u6B3E'],
     }
     priority_list = metric_priorities.get(metric_name, [metric_name])
     return get_metric_value(metrics_dict, priority_list, team)
@@ -76,14 +76,14 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     report.append("|------|" + "|".join(["------" for _ in available_rounds]) + "|------|")
 
     metrics_to_analyze = [
-        ('Sales', '销售额'),
-        ('Net Profit', '净利润'),
-        ('Cash', '现金'),
-        ('Total Equity', '权益合计'),
-        ('Total Assets', '总资产'),
-        ('Short-Term Debt', '短期贷款'),
-        ('Long-Term Debt', '长期贷款'),
-        ('Total Liabilities', ['负债合计', '负债总计']),
+        ('Sales', '\u9500\u552E\u989D'),
+        ('Net Profit', '\u51C0\u5229\u6DA6'),
+        ('Cash', '\u73B0\u91D1'),
+        ('Total Equity', '\u6743\u76CA\u5408\u8BA1'),
+        ('Total Assets', '\u603B\u8D44\u4EA7'),
+        ('Short-Term Debt', '\u77ED\u671F\u8D37\u6B3E'),
+        ('Long-Term Debt', '\u957F\u671F\u8D37\u6B3E'),
+        ('Total Liabilities', ['\u8D1F\u503A\u5408\u8BA1', '\u8D1F\u503A\u603B\u8BA1']),
     ]
 
     for metric_display, metric_name in metrics_to_analyze:
@@ -92,15 +92,15 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
             metrics_dict = all_rounds_data[rnd]
             if isinstance(metric_name, list):
                 val = get_metric_value(metrics_dict, metric_name, team_name)
-            elif metric_name in ['销售额', '净利润', '现金']:
+            elif metric_name in ['\u9500\u552E\u989D', '\u51C0\u5229\u6DA6', '\u73B0\u91D1']:
                 val = get_metric_with_priority(metrics_dict, metric_name, team_name)
             else:
                 val = get_metric_value(metrics_dict, metric_name, team_name)
 
             if val is not None:
-                if metric_name == '现金':
+                if metric_name == '\u73B0\u91D1':
                     values.append(f"${val/1000:.0f}k")
-                elif metric_name in ['销售额', '净利润', '权益合计', '总资产', '短期贷款', '长期贷款'] or isinstance(metric_name, list):
+                elif metric_name in ['\u9500\u552E\u989D', '\u51C0\u5229\u6DA6', '\u6743\u76CA\u5408\u8BA1', '\u603B\u8D44\u4EA7', '\u77ED\u671F\u8D37\u6B3E', '\u957F\u671F\u8D37\u6B3E'] or isinstance(metric_name, list):
                     values.append(f"{val/1000:.0f}k")
                 else:
                     values.append(f"{val:.2f}")
@@ -131,7 +131,7 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
         metrics_dict = all_rounds_data['pr01']
 
         # Cash reserve
-        cash = get_metric_with_priority(metrics_dict, '现金', team_name) or 0
+        cash = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team_name) or 0
         report.append("### 2.1 Cash Reserve\n")
         report.append(f"- **Current cash**: ${cash/1000:.0f}k\n")
 
@@ -144,9 +144,9 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
         report.append(f"- **Status**: {status}\n")
 
         # Net debt / equity
-        equity = get_metric_value(metrics_dict, '权益合计', team_name) or 0
-        short_debt = get_metric_value(metrics_dict, '短期贷款', team_name) or 0
-        long_debt = get_metric_value(metrics_dict, '长期贷款', team_name) or 0
+        equity = get_metric_value(metrics_dict, '\u6743\u76CA\u5408\u8BA1', team_name) or 0
+        short_debt = get_metric_value(metrics_dict, '\u77ED\u671F\u8D37\u6B3E', team_name) or 0
+        long_debt = get_metric_value(metrics_dict, '\u957F\u671F\u8D37\u6B3E', team_name) or 0
 
         if equity > 0:
             net_debt = (short_debt + long_debt) - cash
@@ -169,12 +169,12 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
         # EBITDA margin
         ebitda = get_metric_value(metrics_dict, 'EBITDA', team_name)
         if ebitda is None:
-            ebitda = get_metric_value(metrics_dict, '息税折旧及摊销前利润', team_name) or 0
+            ebitda = get_metric_value(metrics_dict, '\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6', team_name) or 0
         else:
             ebitda = ebitda or 0
         
-        sales = get_metric_with_priority(metrics_dict, '销售额', team_name) or 0
-        profit = get_metric_with_priority(metrics_dict, '净利润', team_name) or 0
+        sales = get_metric_with_priority(metrics_dict, '\u9500\u552E\u989D', team_name) or 0
+        profit = get_metric_with_priority(metrics_dict, '\u51C0\u5229\u6DA6', team_name) or 0
         
         report.append("\n### 2.3 Profitability\n")
         report.append(f"- **Sales**: ${sales/1000:.0f}k\n")
@@ -196,7 +196,7 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
             report.append(f"- **EBITDA status**: {ebitda_status}\n")
 
         # Equity ratio
-        assets = get_metric_value(metrics_dict, '总资产', team_name) or 0
+        assets = get_metric_value(metrics_dict, '\u603B\u8D44\u4EA7', team_name) or 0
         if assets > 0 and equity > 0:
             equity_ratio = (equity / assets) * 100
             report.append("\n### 2.4 Capital Structure\n")
@@ -223,9 +223,9 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
         all_teams_cash = {}
 
         for team in teams:
-            sales_val = get_metric_with_priority(metrics_dict, '销售额', team)
-            profit_val = get_metric_with_priority(metrics_dict, '净利润', team)
-            cash_val = get_metric_with_priority(metrics_dict, '现金', team)
+            sales_val = get_metric_with_priority(metrics_dict, '\u9500\u552E\u989D', team)
+            profit_val = get_metric_with_priority(metrics_dict, '\u51C0\u5229\u6DA6', team)
+            cash_val = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team)
 
             if sales_val is not None:
                 all_teams_sales[team] = sales_val
@@ -275,7 +275,7 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     if 'pr01' in all_rounds_data:
         metrics_dict = all_rounds_data['pr01']
 
-        cash = get_metric_with_priority(metrics_dict, '现金', team_name) or 0
+        cash = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team_name) or 0
 
         report.append("### 4.1 Current Position Assessment\n")
 

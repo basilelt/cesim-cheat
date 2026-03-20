@@ -15,11 +15,11 @@ from utils_data_analysis import read_excel_data, get_metric_value
 def get_metric_with_priority(metrics_dict, metric_name, team):
     """Get metric value using an ordered alias list."""
     metric_priorities = {
-        '销售额': ['销售额合计', '本地销售额', '当地销售额', '销售额'],
-        '净利润': ['本回合利润', '税后利润', '净利润'],
-        '现金': ['现金及等价物', '现金 31.12.', '现金 1.1.', '现金'],
-        '短期贷款': ['短期贷款（无计划）', '短期贷款'],
-        '长期贷款': ['长期贷款'],
+        '\u9500\u552E\u989D': ['\u9500\u552E\u989D\u5408\u8BA1', '\u672C\u5730\u9500\u552E\u989D', '\u5F53\u5730\u9500\u552E\u989D', '\u9500\u552E\u989D'],
+        '\u51C0\u5229\u6DA6': ['\u672C\u56DE\u5408\u5229\u6DA6', '\u7A0E\u540E\u5229\u6DA6', '\u51C0\u5229\u6DA6'],
+        '\u73B0\u91D1': ['\u73B0\u91D1\u53CA\u7B49\u4EF7\u7269', '\u73B0\u91D1 31.12.', '\u73B0\u91D1 1.1.', '\u73B0\u91D1'],
+        '\u77ED\u671F\u8D37\u6B3E': ['\u77ED\u671F\u8D37\u6B3E（\u65E0\u8BA1\u5212）', '\u77ED\u671F\u8D37\u6B3E'],
+        '\u957F\u671F\u8D37\u6B3E': ['\u957F\u671F\u8D37\u6B3E'],
     }
     priority_list = metric_priorities.get(metric_name, [metric_name])
     return get_metric_value(metrics_dict, priority_list, team)
@@ -48,16 +48,16 @@ def get_all_rounds_data(input_dir):
 
 def calculate_metrics(metrics_dict, team):
     """Compute core metrics and derived health indicators."""
-    cash = get_metric_with_priority(metrics_dict, '现金', team) or 0
-    sales = get_metric_with_priority(metrics_dict, '销售额', team) or 0
-    profit = get_metric_with_priority(metrics_dict, '净利润', team) or 0
-    equity = get_metric_value(metrics_dict, '权益合计', team) or 0
-    assets = get_metric_value(metrics_dict, '总资产', team) or 0
-    short_debt = get_metric_value(metrics_dict, '短期贷款', team) or 0
-    long_debt = get_metric_value(metrics_dict, '长期贷款', team) or 0
+    cash = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team) or 0
+    sales = get_metric_with_priority(metrics_dict, '\u9500\u552E\u989D', team) or 0
+    profit = get_metric_with_priority(metrics_dict, '\u51C0\u5229\u6DA6', team) or 0
+    equity = get_metric_value(metrics_dict, '\u6743\u76CA\u5408\u8BA1', team) or 0
+    assets = get_metric_value(metrics_dict, '\u603B\u8D44\u4EA7', team) or 0
+    short_debt = get_metric_value(metrics_dict, '\u77ED\u671F\u8D37\u6B3E', team) or 0
+    long_debt = get_metric_value(metrics_dict, '\u957F\u671F\u8D37\u6B3E', team) or 0
     
     # EBITDA
-    ebitda = get_metric_value(metrics_dict, ['息税折旧及摊销前利润(EBITDA)', '息税折旧及摊销前利润', 'EBITDA'], team)
+    ebitda = get_metric_value(metrics_dict, ['\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6(EBITDA)', '\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6', 'EBITDA'], team)
     # Very small absolute values are often percentages rather than amounts.
     if ebitda is not None and abs(ebitda) < 100:
         ebitda = None
@@ -72,19 +72,19 @@ def calculate_metrics(metrics_dict, team):
     equity_ratio = (equity / assets * 100) if assets > 0 else None
     
     return {
-        '现金': cash,
-        '销售额': sales,
-        '净利润': profit,
-        '权益合计': equity,
-        '总资产': assets,
-        '短期贷款': short_debt,
-        '长期贷款': long_debt,
+        '\u73B0\u91D1': cash,
+        '\u9500\u552E\u989D': sales,
+        '\u51C0\u5229\u6DA6': profit,
+        '\u6743\u76CA\u5408\u8BA1': equity,
+        '\u603B\u8D44\u4EA7': assets,
+        '\u77ED\u671F\u8D37\u6B3E': short_debt,
+        '\u957F\u671F\u8D37\u6B3E': long_debt,
         'EBITDA': ebitda,
-        '净债务': net_debt,
-        '净债务权益比': debt_equity_ratio,
-        'EBITDA率': ebitda_rate,
-        '净利润率': profit_margin,
-        '权益比率': equity_ratio,
+        '\u51C0\u503A\u52A1': net_debt,
+        '\u51C0\u503A\u52A1\u6743\u76CA\u6BD4': debt_equity_ratio,
+        'EBITDA\u7387': ebitda_rate,
+        '\u51C0\u5229\u6DA6\u7387': profit_margin,
+        '\u6743\u76CA\u6BD4\u7387': equity_ratio,
     }
 
 def generate_gap_analysis(target_team, input_dir, output_dir):
@@ -137,35 +137,35 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
     report.append("\n## 1. Overall Ranking Comparison\n")
 
     # Sales ranking
-    sales_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['销售额'], reverse=True)
+    sales_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['\u9500\u552E\u989D'], reverse=True)
     sales_rank = sales_ranking.index(target_team) + 1
     report.append("### 1.1 Sales Ranking\n")
     report.append(f"- **{target_team} rank**: {sales_rank} / {len(teams)}\n")
-    report.append(f"- **Sales**: ${target_metrics['销售额']/1000:.0f}k\n")
+    report.append(f"- **Sales**: ${target_metrics['\u9500\u552E\u989D']/1000:.0f}k\n")
     
     if sales_rank > 1:
         prev_team = sales_ranking[sales_rank - 2]
-        gap = all_teams_metrics[prev_team]['销售额'] - target_metrics['销售额']
+        gap = all_teams_metrics[prev_team]['\u9500\u552E\u989D'] - target_metrics['\u9500\u552E\u989D']
         report.append(f"- **Gap to next higher team**: ${gap/1000:.0f}k ({prev_team})\n")
     
     if sales_rank < len(teams):
         next_team = sales_ranking[sales_rank]
-        gap = target_metrics['销售额'] - all_teams_metrics[next_team]['销售额']
+        gap = target_metrics['\u9500\u552E\u989D'] - all_teams_metrics[next_team]['\u9500\u552E\u989D']
         report.append(f"- **Lead over next lower team**: ${gap/1000:.0f}k ({next_team})\n")
 
     # Net profit ranking
-    profit_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['净利润'], reverse=True)
+    profit_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['\u51C0\u5229\u6DA6'], reverse=True)
     profit_rank = profit_ranking.index(target_team) + 1
     report.append("\n### 1.2 Net Profit Ranking\n")
     report.append(f"- **{target_team} rank**: {profit_rank} / {len(teams)}\n")
-    report.append(f"- **Net profit**: ${target_metrics['净利润']/1000:.0f}k\n")
+    report.append(f"- **Net profit**: ${target_metrics['\u51C0\u5229\u6DA6']/1000:.0f}k\n")
 
     # Cash ranking
-    cash_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['现金'], reverse=True)
+    cash_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['\u73B0\u91D1'], reverse=True)
     cash_rank = cash_ranking.index(target_team) + 1
     report.append("\n### 1.3 Cash Ranking\n")
     report.append(f"- **{target_team} rank**: {cash_rank} / {len(teams)}\n")
-    report.append(f"- **Cash**: ${target_metrics['现金']/1000:.0f}k\n")
+    report.append(f"- **Cash**: ${target_metrics['\u73B0\u91D1']/1000:.0f}k\n")
 
     # Section 2: comparison with top 3.
     report.append("\n## 2. Detailed Comparison Against Top 3 Teams\n")
@@ -176,15 +176,15 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
 
     # Key metric comparison.
     key_metrics = [
-        ('Sales', '销售额', 'k'),
-        ('Net Profit', '净利润', 'k'),
-        ('Cash', '现金', 'k'),
-        ('Total Equity', '权益合计', 'k'),
+        ('Sales', '\u9500\u552E\u989D', 'k'),
+        ('Net Profit', '\u51C0\u5229\u6DA6', 'k'),
+        ('Cash', '\u73B0\u91D1', 'k'),
+        ('Total Equity', '\u6743\u76CA\u5408\u8BA1', 'k'),
         ('EBITDA', 'EBITDA', 'k'),
-        ('EBITDA Margin', 'EBITDA率', '%'),
-        ('Net Profit Margin', '净利润率', '%'),
-        ('Net Debt / Equity', '净债务权益比', '%'),
-        ('Equity Ratio', '权益比率', '%'),
+        ('EBITDA Margin', 'EBITDA\u7387', '%'),
+        ('Net Profit Margin', '\u51C0\u5229\u6DA6\u7387', '%'),
+        ('Net Debt / Equity', '\u51C0\u503A\u52A1\u6743\u76CA\u6BD4', '%'),
+        ('Equity Ratio', '\u6743\u76CA\u6BD4\u7387', '%'),
     ]
 
     for metric_name, metric_key, unit in key_metrics:
@@ -219,45 +219,45 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
 
     report.append(f"### 3.1 Gap vs #1 Team ({top1_team})\n")
 
-    sales_gap = top1_metrics['销售额'] - target_metrics['销售额']
-    sales_gap_pct = (sales_gap / top1_metrics['销售额'] * 100) if top1_metrics['销售额'] > 0 else 0
+    sales_gap = top1_metrics['\u9500\u552E\u989D'] - target_metrics['\u9500\u552E\u989D']
+    sales_gap_pct = (sales_gap / top1_metrics['\u9500\u552E\u989D'] * 100) if top1_metrics['\u9500\u552E\u989D'] > 0 else 0
     report.append(f"- **Sales gap**: ${sales_gap/1000:.0f}k ({sales_gap_pct:.1f}% behind)\n")
 
-    profit_gap = top1_metrics['净利润'] - target_metrics['净利润']
+    profit_gap = top1_metrics['\u51C0\u5229\u6DA6'] - target_metrics['\u51C0\u5229\u6DA6']
     # If #1 profit is positive, use that as baseline; otherwise use target team.
-    if top1_metrics['净利润'] > 0:
-        profit_gap_pct = (profit_gap / top1_metrics['净利润'] * 100)
-    elif target_metrics['净利润'] > 0:
-        profit_gap_pct = (profit_gap / target_metrics['净利润'] * 100)
+    if top1_metrics['\u51C0\u5229\u6DA6'] > 0:
+        profit_gap_pct = (profit_gap / top1_metrics['\u51C0\u5229\u6DA6'] * 100)
+    elif target_metrics['\u51C0\u5229\u6DA6'] > 0:
+        profit_gap_pct = (profit_gap / target_metrics['\u51C0\u5229\u6DA6'] * 100)
     else:
         profit_gap_pct = 0
     report.append(f"- **Net profit gap**: ${profit_gap/1000:.0f}k ({profit_gap_pct:.1f}% behind)\n")
 
-    cash_gap = top1_metrics['现金'] - target_metrics['现金']
-    cash_gap_pct = (cash_gap / top1_metrics['现金'] * 100) if top1_metrics['现金'] > 0 else 0
+    cash_gap = top1_metrics['\u73B0\u91D1'] - target_metrics['\u73B0\u91D1']
+    cash_gap_pct = (cash_gap / top1_metrics['\u73B0\u91D1'] * 100) if top1_metrics['\u73B0\u91D1'] > 0 else 0
     report.append(f"- **Cash gap**: ${cash_gap/1000:.0f}k ({cash_gap_pct:.1f}% behind)\n")
 
     # Compare against industry average.
     report.append("\n### 3.2 Comparison vs Industry Average\n")
 
     import numpy as np
-    avg_sales = np.mean([all_teams_metrics[t]['销售额'] for t in teams])
-    avg_profit = np.mean([all_teams_metrics[t]['净利润'] for t in teams])
-    avg_cash = np.mean([all_teams_metrics[t]['现金'] for t in teams])
+    avg_sales = np.mean([all_teams_metrics[t]['\u9500\u552E\u989D'] for t in teams])
+    avg_profit = np.mean([all_teams_metrics[t]['\u51C0\u5229\u6DA6'] for t in teams])
+    avg_cash = np.mean([all_teams_metrics[t]['\u73B0\u91D1'] for t in teams])
 
-    sales_vs_avg = ((target_metrics['销售额'] - avg_sales) / avg_sales * 100) if avg_sales > 0 else 0
+    sales_vs_avg = ((target_metrics['\u9500\u552E\u989D'] - avg_sales) / avg_sales * 100) if avg_sales > 0 else 0
     # If avg profit is positive, use average as baseline; otherwise use target.
     if avg_profit > 0:
-        profit_vs_avg = ((target_metrics['净利润'] - avg_profit) / avg_profit * 100)
-    elif target_metrics['净利润'] > 0:
-        profit_vs_avg = ((target_metrics['净利润'] - avg_profit) / target_metrics['净利润'] * 100)
+        profit_vs_avg = ((target_metrics['\u51C0\u5229\u6DA6'] - avg_profit) / avg_profit * 100)
+    elif target_metrics['\u51C0\u5229\u6DA6'] > 0:
+        profit_vs_avg = ((target_metrics['\u51C0\u5229\u6DA6'] - avg_profit) / target_metrics['\u51C0\u5229\u6DA6'] * 100)
     else:
         profit_vs_avg = 0
-    cash_vs_avg = ((target_metrics['现金'] - avg_cash) / avg_cash * 100) if avg_cash > 0 else 0
+    cash_vs_avg = ((target_metrics['\u73B0\u91D1'] - avg_cash) / avg_cash * 100) if avg_cash > 0 else 0
 
-    report.append(f"- **Sales**: ${target_metrics['销售额']/1000:.0f}k (industry avg: ${avg_sales/1000:.0f}k, {sales_vs_avg:+.1f}%)\n")
-    report.append(f"- **Net profit**: ${target_metrics['净利润']/1000:.0f}k (industry avg: ${avg_profit/1000:.0f}k, {profit_vs_avg:+.1f}%)\n")
-    report.append(f"- **Cash**: ${target_metrics['现金']/1000:.0f}k (industry avg: ${avg_cash/1000:.0f}k, {cash_vs_avg:+.1f}%)\n")
+    report.append(f"- **Sales**: ${target_metrics['\u9500\u552E\u989D']/1000:.0f}k (industry avg: ${avg_sales/1000:.0f}k, {sales_vs_avg:+.1f}%)\n")
+    report.append(f"- **Net profit**: ${target_metrics['\u51C0\u5229\u6DA6']/1000:.0f}k (industry avg: ${avg_profit/1000:.0f}k, {profit_vs_avg:+.1f}%)\n")
+    report.append(f"- **Cash**: ${target_metrics['\u73B0\u91D1']/1000:.0f}k (industry avg: ${avg_cash/1000:.0f}k, {cash_vs_avg:+.1f}%)\n")
 
     # Section 4: multi-round trend comparison.
     report.append("\n## 4. Multi-Round Trend Comparison\n")
@@ -277,7 +277,7 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
             for rnd in available_rounds:
                 if rnd in all_rounds_data:
                     metrics = all_rounds_data[rnd]['metrics']
-                    sales = get_metric_with_priority(metrics, '销售额', team) or 0
+                    sales = get_metric_with_priority(metrics, '\u9500\u552E\u989D', team) or 0
                     values.append(f"${sales/1000:.0f}k")
                 else:
                     values.append("N/A")
@@ -292,25 +292,25 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
     if sales_rank > 3:
         report.append(f"1. Increase sales: currently ranked #{sales_rank}; approximately ${sales_gap/1000:.0f}k is needed to match #1\n")
     
-    if target_metrics['EBITDA率'] and target_metrics['EBITDA率'] < 20:
+    if target_metrics['EBITDA\u7387'] and target_metrics['EBITDA\u7387'] < 20:
         report.append("2. Improve profitability: EBITDA margin is low; optimize cost structure and/or pricing\n")
     
-    if target_metrics['现金'] < 300000:
+    if target_metrics['\u73B0\u91D1'] < 300000:
         report.append("3. Increase cash reserve: maintain a larger liquidity buffer\n")
     
-    if target_metrics['净债务权益比'] and target_metrics['净债务权益比'] > 30:
+    if target_metrics['\u51C0\u503A\u52A1\u6743\u76CA\u6BD4'] and target_metrics['\u51C0\u503A\u52A1\u6743\u76CA\u6BD4'] > 30:
         report.append("4. Rebalance debt structure: reduce debt load or strengthen equity base\n")
 
     report.append("\n### 5.2 Benchmark Teams to Learn From\n")
-    report.append(f"- **Sales benchmark**: {top1_team} (${top1_metrics['销售额']/1000:.0f}k)\n")
+    report.append(f"- **Sales benchmark**: {top1_team} (${top1_metrics['\u9500\u552E\u989D']/1000:.0f}k)\n")
 
     # Team with highest profit.
-    profit_leader = max(teams, key=lambda t: all_teams_metrics[t]['净利润'])
-    report.append(f"- **Profit benchmark**: {profit_leader} (net profit ${all_teams_metrics[profit_leader]['净利润']/1000:.0f}k)\n")
+    profit_leader = max(teams, key=lambda t: all_teams_metrics[t]['\u51C0\u5229\u6DA6'])
+    report.append(f"- **Profit benchmark**: {profit_leader} (net profit ${all_teams_metrics[profit_leader]['\u51C0\u5229\u6DA6']/1000:.0f}k)\n")
 
     # Team with strongest cash position.
-    cash_leader = max(teams, key=lambda t: all_teams_metrics[t]['现金'])
-    report.append(f"- **Cash management benchmark**: {cash_leader} (cash ${all_teams_metrics[cash_leader]['现金']/1000:.0f}k)\n")
+    cash_leader = max(teams, key=lambda t: all_teams_metrics[t]['\u73B0\u91D1'])
+    report.append(f"- **Cash management benchmark**: {cash_leader} (cash ${all_teams_metrics[cash_leader]['\u73B0\u91D1']/1000:.0f}k)\n")
 
     # Save report.
     report_text = "\n".join(report)
