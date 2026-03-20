@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-批量生成所有队伍的详细分析报告
+Generate detailed analysis reports for all teams.
 """
 
 import sys
 from pathlib import Path
 
-# 添加utils目录到路径
+# Add directories to import path.
 sys.path.insert(0, str(Path(__file__).parent.parent / 'utils'))
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -15,48 +15,48 @@ from utils_data_analysis import read_excel_data
 from analyze_team_detail import analyze_team_detailed
 
 def main(input_dir, output_dir):
-    """为所有队伍生成详细分析报告"""
+    """Generate detailed reports for every team found in the input files."""
     
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # 读取数据文件获取所有队伍名称
+    # Read data files to identify team names.
     ir00_path = input_dir / 'results-ir00.xls'
     if not ir00_path.exists():
-        # 尝试读取 r01 或 pr01
+        # Try r01 or pr01 if ir00 is not available.
         r01_path = input_dir / 'results-r01.xls'
         if not r01_path.exists():
             r01_path = input_dir / 'results-pr01.xls'
         if r01_path.exists():
             _, teams = read_excel_data(str(r01_path))
         else:
-            print(f"错误: 未找到数据文件")
+            print("Error: No data file found.")
             return
     else:
         _, teams = read_excel_data(str(ir00_path))
     
-    print(f"找到 {len(teams)} 支队伍")
-    print(f"队伍列表: {', '.join(teams)}")
-    print("\n开始生成各队伍详细分析报告...\n")
+    print(f"Found {len(teams)} teams")
+    print(f"Teams: {', '.join(teams)}")
+    print("\nGenerating detailed reports for each team...\n")
     
-    # 为每支队伍生成报告
+    # Generate one report per team.
     for i, team in enumerate(teams, 1):
-        print(f"[{i}/{len(teams)}] 正在生成 {team} 的分析报告...")
+        print(f"[{i}/{len(teams)}] Generating report for {team}...")
         try:
             analyze_team_detailed(team, str(input_dir), str(output_dir))
-            print(f"  ✓ {team} 报告生成成功")
+            print(f"  ✓ {team} report generated")
         except Exception as e:
-            print(f"  ✗ {team} 报告生成失败: {e}")
+            print(f"  ✗ {team} report failed: {e}")
     
-    print(f"\n所有报告已生成到: {output_dir}")
+    print(f"\nAll reports were generated in: {output_dir}")
 
 if __name__ == '__main__':
     import argparse
     
-    parser = argparse.ArgumentParser(description='批量生成所有队伍的详细分析报告')
-    parser.add_argument('--input-dir', '-i', type=str, required=True, help='数据输入目录')
-    parser.add_argument('--output-dir', '-o', type=str, required=True, help='报告输出目录')
+    parser = argparse.ArgumentParser(description='Generate detailed analysis reports for all teams')
+    parser.add_argument('--input-dir', '-i', type=str, required=True, help='Input data directory')
+    parser.add_argument('--output-dir', '-o', type=str, required=True, help='Output report directory')
     
     args = parser.parse_args()
     main(args.input_dir, args.output_dir)
