@@ -18,16 +18,57 @@ from utils_data_analysis import (
 
 
 def get_metric_with_priority(metrics_dict, metric_name, team):
-    """Get metric value using a priority list of column aliases."""
+    """Get metric value using a priority list of column aliases.
+    Supports both English (Cesim Excel) and Chinese legacy key names.
+    """
     metric_priorities = {
+        # English keys (Cesim Excel output)
+        'Sales revenue': ['Sales revenue total', 'Sales revenue'],
+        'Profit for the round': ['Profit for the round'],
+        'Cash and cash equivalents': ['Cash and cash equivalents'],
+        'Short-term debts (unplanned)': ['Short-term debts (unplanned)', 'Short-term debts'],
+        'Long-term debts': ['Long-term debts'],
+        # Chinese legacy keys
         '\u9500\u552E\u989D': ['\u9500\u552E\u989D\u5408\u8BA1', '\u672C\u5730\u9500\u552E\u989D', '\u5F53\u5730\u9500\u552E\u989D', '\u9500\u552E\u989D'],
         '\u51C0\u5229\u6DA6': ['\u672C\u56DE\u5408\u5229\u6DA6', '\u7A0E\u540E\u5229\u6DA6', '\u51C0\u5229\u6DA6'],
         '\u73B0\u91D1': ['\u73B0\u91D1\u53CA\u7B49\u4EF7\u7269', '\u73B0\u91D1 31.12.', '\u73B0\u91D1 1.1.', '\u73B0\u91D1'],
-        '\u77ED\u671F\u8D37\u6B3E': ['\u77ED\u671F\u8D37\u6B3E（\u65E0\u8BA1\u5212）', '\u77ED\u671F\u8D37\u6B3E'],
+        '\u77ED\u671F\u8D37\u6B3E': ['\u77ED\u671F\u8D37\u6B3E\uff08\u65E0\u8BA1\u5212\uff09', '\u77ED\u671F\u8D37\u6B3E'],
         '\u957F\u671F\u8D37\u6B3E': ['\u957F\u671F\u8D37\u6B3E'],
     }
     priority_list = metric_priorities.get(metric_name, [metric_name])
     return get_metric_value(metrics_dict, priority_list, team)
+
+
+def _get(metrics_dict, primary_en, fallback_cn, team):
+    """Try English key first, fall back to Chinese legacy key."""
+    val = get_metric_with_priority(metrics_dict, primary_en, team)
+    if val is None:
+        val = get_metric_with_priority(metrics_dict, fallback_cn, team)
+    return val or 0
+
+
+def get_all_rounds_data(input_dir):
+    """Read all available rounds from input directory."""
+    input_dir = Path(input_dir)
+    all_rounds_data = {}
+    teams = []
+
+    # ir00
+    ir00_path = input_dir / 'results-ir00.xls'
+    if ir00_path.exists():
+        metrics_dict, teams = read_excel_data(str(ir00_path))
+        all_rounds_data['ir00'] = metrics_dict
+
+    # r01/pr01, r02/pr02, ...
+    for i in range(1, 100):
+        r_path = input_dir / f'results-r{i:02d}.xls'
+        if not r_path.exists():
+            r_path = input_dir / f'results-pr{i:02d}.xls'
+        if r_path.exists():
+            metrics_dict, teams = read_excel_data(str(r_path))
+            all_rounds_data[f'pr{i:02d}'] = metrics_dict
+
+    return all_rounds_data, teams
 
 
 def analyze_team_detailed(team_name, input_dir, output_dir):
@@ -37,27 +78,27 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Read round data files.
-    all_rounds_data = {}
+    all_rounds_data, teams = get_all_rounds_data(input_dir)
 
-    # ir00
-    ir00_path = input_dir / 'results-ir00.xls'
-    if ir00_path.exists():
-        metrics_dict, teams = read_excel_data(str(ir00_path))
-        all_rounds_data['ir00'] = metrics_dict
-
-    # pr01 (or r01)
-    r01_path = input_dir / 'results-r01.xls'
-    if not r01_path.exists():
-        r01_path = input_dir / 'results-pr01.xls'
-    if r01_path.exists():
-        metrics_dict, teams = read_excel_data(str(r01_path))
-        all_rounds_data['pr01'] = metrics_dict
+    if not all_rounds_data:
+        print("Error: No result files found")
+        return
 
     if team_name not in teams:
         print(f"Error: Team '{team_name}' was not found")
         print(f"Available teams: {', '.join(teams)}")
         return
+
+    # Determine round order dynamically.
+    rounds_order = []
+    if 'ir00' in all_rounds_data:
+        rounds_order.append('ir00')
+    for i in range(1, 100):
+        key = f'pr{i:02d}'
+        if key in all_rounds_data:
+            rounds_order.append(key)
+    available_rounds = [r for r in rounds_order if r in all_rounds_data]
+    latest_round = available_rounds[-1] if available_rounds else None
 
     # Build report.
     report = []
@@ -68,52 +109,45 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     # Section 1: key metric comparison across rounds.
     report.append("\n## 1. Multi-Round Key Metric Comparison\n")
 
-    rounds_order = ['ir00', 'pr01']
-    available_rounds = [r for r in rounds_order if r in all_rounds_data]
-
     report.append("### 1.1 Core Financial Metrics\n")
     report.append("| Metric | " + " | ".join([r.upper() for r in available_rounds]) + " | Change |")
     report.append("|------|" + "|".join(["------" for _ in available_rounds]) + "|------|")
 
     metrics_to_analyze = [
-        ('Sales', '\u9500\u552E\u989D'),
-        ('Net Profit', '\u51C0\u5229\u6DA6'),
-        ('Cash', '\u73B0\u91D1'),
-        ('Total Equity', '\u6743\u76CA\u5408\u8BA1'),
-        ('Total Assets', '\u603B\u8D44\u4EA7'),
-        ('Short-Term Debt', '\u77ED\u671F\u8D37\u6B3E'),
-        ('Long-Term Debt', '\u957F\u671F\u8D37\u6B3E'),
-        ('Total Liabilities', ['\u8D1F\u503A\u5408\u8BA1', '\u8D1F\u503A\u603B\u8BA1']),
+        ('Sales', 'Sales revenue', '\u9500\u552E\u989D'),
+        ('Net Profit', 'Profit for the round', '\u51C0\u5229\u6DA6'),
+        ('Cash', 'Cash and cash equivalents', '\u73B0\u91D1'),
+        ('Total Equity', 'Total equity', '\u6743\u76CA\u5408\u8BA1'),
+        ('Total Assets', 'Total assets', '\u603B\u8D44\u4EA7'),
+        ('Short-Term Debt', 'Short-term debts (unplanned)', '\u77ED\u671F\u8D37\u6B3E'),
+        ('Long-Term Debt', 'Long-term debts', '\u957F\u671F\u8D37\u6B3E'),
+        ('Total Liabilities', 'Total liabilities', '\u8D1F\u503A\u5408\u8BA1'),
     ]
 
-    for metric_display, metric_name in metrics_to_analyze:
+    for item in metrics_to_analyze:
+        metric_display = item[0]
+        en_key = item[1]
+        cn_key = item[2]
+
         values = []
         for rnd in available_rounds:
             metrics_dict = all_rounds_data[rnd]
-            if isinstance(metric_name, list):
-                val = get_metric_value(metrics_dict, metric_name, team_name)
-            elif metric_name in ['\u9500\u552E\u989D', '\u51C0\u5229\u6DA6', '\u73B0\u91D1']:
-                val = get_metric_with_priority(metrics_dict, metric_name, team_name)
-            else:
-                val = get_metric_value(metrics_dict, metric_name, team_name)
+            val = _get(metrics_dict, en_key, cn_key, team_name)
 
-            if val is not None:
-                if metric_name == '\u73B0\u91D1':
-                    values.append(f"${val/1000:.0f}k")
-                elif metric_name in ['\u9500\u552E\u989D', '\u51C0\u5229\u6DA6', '\u6743\u76CA\u5408\u8BA1', '\u603B\u8D44\u4EA7', '\u77ED\u671F\u8D37\u6B3E', '\u957F\u671F\u8D37\u6B3E'] or isinstance(metric_name, list):
-                    values.append(f"{val/1000:.0f}k")
-                else:
-                    values.append(f"{val:.2f}")
+            if val is not None and val != 0:
+                values.append(f"{val/1000:.0f}k")
+            elif val == 0:
+                values.append("0")
             else:
                 values.append("N/A")
 
-        # Compute round-over-round change when possible.
-        if len(available_rounds) >= 2 and values[0] != "N/A" and values[1] != "N/A":
+        # Compute change between first and last round.
+        if len(available_rounds) >= 2 and values[0] != "N/A" and values[-1] != "N/A":
             try:
                 val0 = float(values[0].replace('$', '').replace('k', '').replace(',', ''))
-                val1 = float(values[1].replace('$', '').replace('k', '').replace(',', ''))
+                val_last = float(values[-1].replace('$', '').replace('k', '').replace(',', ''))
                 if val0 != 0:
-                    change = ((val1 - val0) / abs(val0)) * 100
+                    change = ((val_last - val0) / abs(val0)) * 100
                     change_str = f"{change:+.1f}%"
                 else:
                     change_str = "N/A"
@@ -127,11 +161,11 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     # Section 2: financial health.
     report.append("\n\n## 2. Financial Health Deep Dive\n")
 
-    if 'pr01' in all_rounds_data:
-        metrics_dict = all_rounds_data['pr01']
+    if latest_round and latest_round in all_rounds_data:
+        metrics_dict = all_rounds_data[latest_round]
 
         # Cash reserve
-        cash = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team_name) or 0
+        cash = _get(metrics_dict, 'Cash and cash equivalents', '\u73B0\u91D1', team_name)
         report.append("### 2.1 Cash Reserve\n")
         report.append(f"- **Current cash**: ${cash/1000:.0f}k\n")
 
@@ -144,9 +178,9 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
         report.append(f"- **Status**: {status}\n")
 
         # Net debt / equity
-        equity = get_metric_value(metrics_dict, '\u6743\u76CA\u5408\u8BA1', team_name) or 0
-        short_debt = get_metric_value(metrics_dict, '\u77ED\u671F\u8D37\u6B3E', team_name) or 0
-        long_debt = get_metric_value(metrics_dict, '\u957F\u671F\u8D37\u6B3E', team_name) or 0
+        equity = get_metric_value(metrics_dict, ['Total equity', '\u6743\u76CA\u5408\u8BA1'], team_name) or 0
+        short_debt = get_metric_value(metrics_dict, ['Short-term debts (unplanned)', 'Short-term debts', '\u77ED\u671F\u8D37\u6B3E'], team_name) or 0
+        long_debt = get_metric_value(metrics_dict, ['Long-term debts', '\u957F\u671F\u8D37\u6B3E'], team_name) or 0
 
         if equity > 0:
             net_debt = (short_debt + long_debt) - cash
@@ -167,15 +201,19 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
             report.append(f"- **Status**: {debt_status}\n")
 
         # EBITDA margin
-        ebitda = get_metric_value(metrics_dict, 'EBITDA', team_name)
+        ebitda = get_metric_value(metrics_dict, [
+            'Operating profit before depreciation (EBITDA)',
+            '\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6(EBITDA)',
+            'EBITDA',
+        ], team_name)
+        if ebitda is not None and abs(ebitda) < 100:
+            ebitda = None
         if ebitda is None:
-            ebitda = get_metric_value(metrics_dict, '\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6', team_name) or 0
-        else:
-            ebitda = ebitda or 0
-        
-        sales = get_metric_with_priority(metrics_dict, '\u9500\u552E\u989D', team_name) or 0
-        profit = get_metric_with_priority(metrics_dict, '\u51C0\u5229\u6DA6', team_name) or 0
-        
+            ebitda = 0
+
+        sales = _get(metrics_dict, 'Sales revenue', '\u9500\u552E\u989D', team_name)
+        profit = _get(metrics_dict, 'Profit for the round', '\u51C0\u5229\u6DA6', team_name)
+
         report.append("\n### 2.3 Profitability\n")
         report.append(f"- **Sales**: ${sales/1000:.0f}k\n")
         report.append(f"- **Net profit**: ${profit/1000:.0f}k\n")
@@ -196,7 +234,7 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
             report.append(f"- **EBITDA status**: {ebitda_status}\n")
 
         # Equity ratio
-        assets = get_metric_value(metrics_dict, '\u603B\u8D44\u4EA7', team_name) or 0
+        assets = get_metric_value(metrics_dict, ['Total assets', '\u603B\u8D44\u4EA7'], team_name) or 0
         if assets > 0 and equity > 0:
             equity_ratio = (equity / assets) * 100
             report.append("\n### 2.4 Capital Structure\n")
@@ -214,8 +252,8 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     # Section 3: peer benchmark.
     report.append("\n\n## 3. Peer Benchmark Analysis\n")
 
-    if 'pr01' in all_rounds_data:
-        metrics_dict = all_rounds_data['pr01']
+    if latest_round and latest_round in all_rounds_data:
+        metrics_dict = all_rounds_data[latest_round]
 
         # Collect values for all teams.
         all_teams_sales = {}
@@ -223,15 +261,15 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
         all_teams_cash = {}
 
         for team in teams:
-            sales_val = get_metric_with_priority(metrics_dict, '\u9500\u552E\u989D', team)
-            profit_val = get_metric_with_priority(metrics_dict, '\u51C0\u5229\u6DA6', team)
-            cash_val = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team)
+            sales_val = _get(metrics_dict, 'Sales revenue', '\u9500\u552E\u989D', team)
+            profit_val = _get(metrics_dict, 'Profit for the round', '\u51C0\u5229\u6DA6', team)
+            cash_val = _get(metrics_dict, 'Cash and cash equivalents', '\u73B0\u91D1', team)
 
-            if sales_val is not None:
+            if sales_val:
                 all_teams_sales[team] = sales_val
-            if profit_val is not None:
+            if profit_val:
                 all_teams_profit[team] = profit_val
-            if cash_val is not None:
+            if cash_val:
                 all_teams_cash[team] = cash_val
 
         # Sales ranking
@@ -243,7 +281,7 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
             report.append("### 3.1 Sales Ranking\n")
             report.append(f"- **Current rank**: {sales_rank} / {sales_rank_total}\n")
             if sales_rank:
-                team_sales = all_teams_sales[team_name]
+                team_sales = all_teams_sales.get(team_name, 0)
                 if sales_rank > 1:
                     prev_team, prev_sales = sorted_sales[sales_rank - 2]
                     gap = prev_sales - team_sales
@@ -272,10 +310,10 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     # Section 4: strategy suggestions.
     report.append("\n\n## 4. Strategy Recommendations and Action Plan\n")
 
-    if 'pr01' in all_rounds_data:
-        metrics_dict = all_rounds_data['pr01']
+    if latest_round and latest_round in all_rounds_data:
+        metrics_dict = all_rounds_data[latest_round]
 
-        cash = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team_name) or 0
+        cash = _get(metrics_dict, 'Cash and cash equivalents', '\u73B0\u91D1', team_name)
 
         report.append("### 4.1 Current Position Assessment\n")
 
@@ -313,7 +351,7 @@ def analyze_team_detailed(team_name, input_dir, output_dir):
     # Save report.
     report_text = "\n".join(report)
     output_file = output_dir / f'{team_name}_detailed_analysis_report.md'
-    
+
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(report_text)
 
@@ -331,4 +369,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     analyze_team_detailed(args.team, args.input_dir, args.output_dir)
-

@@ -3,3 +3,7 @@ results/
 analysis/
 mhtml/
 node_modules/
+.DS_Store
+*.png
+decisions/
+.claude/settings.local.json

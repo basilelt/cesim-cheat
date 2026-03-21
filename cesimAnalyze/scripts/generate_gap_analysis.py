@@ -13,12 +13,21 @@ from utils_data_analysis import read_excel_data, get_metric_value
 
 
 def get_metric_with_priority(metrics_dict, metric_name, team):
-    """Get metric value using an ordered alias list."""
+    """Get metric value using an ordered alias list.
+    Supports both English (Cesim Excel) and Chinese legacy key names.
+    """
     metric_priorities = {
+        # English keys (Cesim Excel output)
+        'Sales revenue': ['Sales revenue total', 'Sales revenue'],
+        'Profit for the round': ['Profit for the round'],
+        'Cash and cash equivalents': ['Cash and cash equivalents'],
+        'Short-term debts (unplanned)': ['Short-term debts (unplanned)', 'Short-term debts'],
+        'Long-term debts': ['Long-term debts'],
+        # Chinese legacy keys
         '\u9500\u552E\u989D': ['\u9500\u552E\u989D\u5408\u8BA1', '\u672C\u5730\u9500\u552E\u989D', '\u5F53\u5730\u9500\u552E\u989D', '\u9500\u552E\u989D'],
         '\u51C0\u5229\u6DA6': ['\u672C\u56DE\u5408\u5229\u6DA6', '\u7A0E\u540E\u5229\u6DA6', '\u51C0\u5229\u6DA6'],
         '\u73B0\u91D1': ['\u73B0\u91D1\u53CA\u7B49\u4EF7\u7269', '\u73B0\u91D1 31.12.', '\u73B0\u91D1 1.1.', '\u73B0\u91D1'],
-        '\u77ED\u671F\u8D37\u6B3E': ['\u77ED\u671F\u8D37\u6B3E（\u65E0\u8BA1\u5212）', '\u77ED\u671F\u8D37\u6B3E'],
+        '\u77ED\u671F\u8D37\u6B3E': ['\u77ED\u671F\u8D37\u6B3E\uff08\u65E0\u8BA1\u5212\uff09', '\u77ED\u671F\u8D37\u6B3E'],
         '\u957F\u671F\u8D37\u6B3E': ['\u957F\u671F\u8D37\u6B3E'],
     }
     priority_list = metric_priorities.get(metric_name, [metric_name])
@@ -48,16 +57,28 @@ def get_all_rounds_data(input_dir):
 
 def calculate_metrics(metrics_dict, team):
     """Compute core metrics and derived health indicators."""
-    cash = get_metric_with_priority(metrics_dict, '\u73B0\u91D1', team) or 0
-    sales = get_metric_with_priority(metrics_dict, '\u9500\u552E\u989D', team) or 0
-    profit = get_metric_with_priority(metrics_dict, '\u51C0\u5229\u6DA6', team) or 0
-    equity = get_metric_value(metrics_dict, '\u6743\u76CA\u5408\u8BA1', team) or 0
-    assets = get_metric_value(metrics_dict, '\u603B\u8D44\u4EA7', team) or 0
-    short_debt = get_metric_value(metrics_dict, '\u77ED\u671F\u8D37\u6B3E', team) or 0
-    long_debt = get_metric_value(metrics_dict, '\u957F\u671F\u8D37\u6B3E', team) or 0
-    
-    # EBITDA
-    ebitda = get_metric_value(metrics_dict, ['\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6(EBITDA)', '\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6', 'EBITDA'], team)
+    # Try English keys first (Cesim Excel), fall back to Chinese legacy keys.
+    def _get(primary_en, fallback_cn):
+        val = get_metric_with_priority(metrics_dict, primary_en, team)
+        if val is None:
+            val = get_metric_with_priority(metrics_dict, fallback_cn, team)
+        return val or 0
+
+    cash   = _get('Cash and cash equivalents', '\u73B0\u91D1')
+    sales  = _get('Sales revenue', '\u9500\u552E\u989D')
+    profit = _get('Profit for the round', '\u51C0\u5229\u6DA6')
+    equity = get_metric_value(metrics_dict, ['Total equity', '\u6743\u76CA\u5408\u8BA1'], team) or 0
+    assets = get_metric_value(metrics_dict, ['Total assets', '\u603B\u8D44\u4EA7'], team) or 0
+    short_debt = get_metric_value(metrics_dict, ['Short-term debts (unplanned)', 'Short-term debts', '\u77ED\u671F\u8D37\u6B3E'], team) or 0
+    long_debt  = get_metric_value(metrics_dict, ['Long-term debts', '\u957F\u671F\u8D37\u6B3E'], team) or 0
+
+    # EBITDA — English key first
+    ebitda = get_metric_value(metrics_dict, [
+        'Operating profit before depreciation (EBITDA)',
+        '\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9500\u524D\u5229\u6DA6(EBITDA)',
+        '\u606F\u7A0E\u6298\u65E7\u53CA\u644A\u9100\u524D\u5229\u6DA6',
+        'EBITDA',
+    ], team)
     # Very small absolute values are often percentages rather than amounts.
     if ebitda is not None and abs(ebitda) < 100:
         ebitda = None
@@ -72,19 +93,19 @@ def calculate_metrics(metrics_dict, team):
     equity_ratio = (equity / assets * 100) if assets > 0 else None
     
     return {
-        '\u73B0\u91D1': cash,
-        '\u9500\u552E\u989D': sales,
-        '\u51C0\u5229\u6DA6': profit,
-        '\u6743\u76CA\u5408\u8BA1': equity,
-        '\u603B\u8D44\u4EA7': assets,
-        '\u77ED\u671F\u8D37\u6B3E': short_debt,
-        '\u957F\u671F\u8D37\u6B3E': long_debt,
-        'EBITDA': ebitda,
-        '\u51C0\u503A\u52A1': net_debt,
-        '\u51C0\u503A\u52A1\u6743\u76CA\u6BD4': debt_equity_ratio,
-        'EBITDA\u7387': ebitda_rate,
-        '\u51C0\u5229\u6DA6\u7387': profit_margin,
-        '\u6743\u76CA\u6BD4\u7387': equity_ratio,
+        'cash': cash,
+        'sales': sales,
+        'profit': profit,
+        'equity': equity,
+        'assets': assets,
+        'short_debt': short_debt,
+        'long_debt': long_debt,
+        'ebitda': ebitda,
+        'net_debt': net_debt,
+        'debt_equity_ratio': debt_equity_ratio,
+        'ebitda_rate': ebitda_rate,
+        'profit_margin': profit_margin,
+        'equity_ratio': equity_ratio,
     }
 
 def generate_gap_analysis(target_team, input_dir, output_dir):
@@ -137,75 +158,72 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
     report.append("\n## 1. Overall Ranking Comparison\n")
 
     # Sales ranking
-    sales_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['\u9500\u552E\u989D'], reverse=True)
+    sales_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['sales'], reverse=True)
     sales_rank = sales_ranking.index(target_team) + 1
     report.append("### 1.1 Sales Ranking\n")
     report.append(f"- **{target_team} rank**: {sales_rank} / {len(teams)}\n")
-    report.append(f"- **Sales**: ${target_metrics['\u9500\u552E\u989D']/1000:.0f}k\n")
-    
+    report.append(f"- **Sales**: ${target_metrics['sales']/1000:.0f}k\n")
+
     if sales_rank > 1:
         prev_team = sales_ranking[sales_rank - 2]
-        gap = all_teams_metrics[prev_team]['\u9500\u552E\u989D'] - target_metrics['\u9500\u552E\u989D']
+        gap = all_teams_metrics[prev_team]['sales'] - target_metrics['sales']
         report.append(f"- **Gap to next higher team**: ${gap/1000:.0f}k ({prev_team})\n")
-    
+
     if sales_rank < len(teams):
         next_team = sales_ranking[sales_rank]
-        gap = target_metrics['\u9500\u552E\u989D'] - all_teams_metrics[next_team]['\u9500\u552E\u989D']
+        gap = target_metrics['sales'] - all_teams_metrics[next_team]['sales']
         report.append(f"- **Lead over next lower team**: ${gap/1000:.0f}k ({next_team})\n")
 
     # Net profit ranking
-    profit_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['\u51C0\u5229\u6DA6'], reverse=True)
+    profit_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['profit'], reverse=True)
     profit_rank = profit_ranking.index(target_team) + 1
     report.append("\n### 1.2 Net Profit Ranking\n")
     report.append(f"- **{target_team} rank**: {profit_rank} / {len(teams)}\n")
-    report.append(f"- **Net profit**: ${target_metrics['\u51C0\u5229\u6DA6']/1000:.0f}k\n")
+    report.append(f"- **Net profit**: ${target_metrics['profit']/1000:.0f}k\n")
 
     # Cash ranking
-    cash_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['\u73B0\u91D1'], reverse=True)
+    cash_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['cash'], reverse=True)
     cash_rank = cash_ranking.index(target_team) + 1
     report.append("\n### 1.3 Cash Ranking\n")
     report.append(f"- **{target_team} rank**: {cash_rank} / {len(teams)}\n")
-    report.append(f"- **Cash**: ${target_metrics['\u73B0\u91D1']/1000:.0f}k\n")
+    report.append(f"- **Cash**: ${target_metrics['cash']/1000:.0f}k\n")
+
+    # EBITDA ranking
+    ebitda_ranking = sorted(teams, key=lambda t: all_teams_metrics[t]['ebitda'], reverse=True)
+    ebitda_rank = ebitda_ranking.index(target_team) + 1
+    report.append("\n### 1.4 EBITDA Ranking\n")
+    report.append(f"- **{target_team} rank**: {ebitda_rank} / {len(teams)}\n")
+    report.append(f"- **EBITDA**: ${target_metrics['ebitda']/1000:.0f}k\n")
 
     # Section 2: comparison with top 3.
     report.append("\n## 2. Detailed Comparison Against Top 3 Teams\n")
 
     top3_teams = sales_ranking[:3]
-    report.append("| Metric | " + " | ".join([f"{target_team}"] + top3_teams) + " |")
+    report.append("| Metric | " + " | ".join([target_team] + top3_teams) + " |")
     report.append("|------|" + "|".join(["------" for _ in range(4)]) + "|")
 
-    # Key metric comparison.
     key_metrics = [
-        ('Sales', '\u9500\u552E\u989D', 'k'),
-        ('Net Profit', '\u51C0\u5229\u6DA6', 'k'),
-        ('Cash', '\u73B0\u91D1', 'k'),
-        ('Total Equity', '\u6743\u76CA\u5408\u8BA1', 'k'),
-        ('EBITDA', 'EBITDA', 'k'),
-        ('EBITDA Margin', 'EBITDA\u7387', '%'),
-        ('Net Profit Margin', '\u51C0\u5229\u6DA6\u7387', '%'),
-        ('Net Debt / Equity', '\u51C0\u503A\u52A1\u6743\u76CA\u6BD4', '%'),
-        ('Equity Ratio', '\u6743\u76CA\u6BD4\u7387', '%'),
+        ('Sales (k USD)',        'sales',             'k'),
+        ('Net Profit (k USD)',   'profit',            'k'),
+        ('Cash (k USD)',         'cash',              'k'),
+        ('Total Equity (k USD)', 'equity',            'k'),
+        ('EBITDA (k USD)',       'ebitda',            'k'),
+        ('EBITDA Margin',        'ebitda_rate',       '%'),
+        ('Net Profit Margin',    'profit_margin',     '%'),
+        ('Net Debt / Equity',    'debt_equity_ratio', '%'),
+        ('Equity Ratio',         'equity_ratio',      '%'),
     ]
 
     for metric_name, metric_key, unit in key_metrics:
-        # Format target team value.
         target_val = target_metrics[metric_key]
         if target_val is not None:
-            if unit == 'k':
-                values = [f"${target_val/1000:.0f}{unit}"]
-            else:
-                values = [f"{target_val:.1f}{unit}"]
+            values = [f"${target_val/1000:.0f}k" if unit == 'k' else f"{target_val:.1f}%"]
         else:
             values = ["N/A"]
-        
-        # Format peer values.
         for team in top3_teams:
             val = all_teams_metrics[team][metric_key]
             if val is not None:
-                if unit == 'k':
-                    values.append(f"${val/1000:.0f}{unit}")
-                else:
-                    values.append(f"{val:.1f}{unit}")
+                values.append(f"${val/1000:.0f}k" if unit == 'k' else f"{val:.1f}%")
             else:
                 values.append("N/A")
         report.append(f"| {metric_name} | " + " | ".join(values) + " |")
@@ -213,56 +231,55 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
     # Section 3: gap diagnostics.
     report.append("\n## 3. Key Gap Analysis\n")
 
-    # Gap against rank #1.
     top1_team = top3_teams[0]
     top1_metrics = all_teams_metrics[top1_team]
 
     report.append(f"### 3.1 Gap vs #1 Team ({top1_team})\n")
 
-    sales_gap = top1_metrics['\u9500\u552E\u989D'] - target_metrics['\u9500\u552E\u989D']
-    sales_gap_pct = (sales_gap / top1_metrics['\u9500\u552E\u989D'] * 100) if top1_metrics['\u9500\u552E\u989D'] > 0 else 0
+    sales_gap = top1_metrics['sales'] - target_metrics['sales']
+    sales_gap_pct = (sales_gap / top1_metrics['sales'] * 100) if top1_metrics['sales'] > 0 else 0
     report.append(f"- **Sales gap**: ${sales_gap/1000:.0f}k ({sales_gap_pct:.1f}% behind)\n")
 
-    profit_gap = top1_metrics['\u51C0\u5229\u6DA6'] - target_metrics['\u51C0\u5229\u6DA6']
-    # If #1 profit is positive, use that as baseline; otherwise use target team.
-    if top1_metrics['\u51C0\u5229\u6DA6'] > 0:
-        profit_gap_pct = (profit_gap / top1_metrics['\u51C0\u5229\u6DA6'] * 100)
-    elif target_metrics['\u51C0\u5229\u6DA6'] > 0:
-        profit_gap_pct = (profit_gap / target_metrics['\u51C0\u5229\u6DA6'] * 100)
+    profit_gap = top1_metrics['profit'] - target_metrics['profit']
+    if top1_metrics['profit'] > 0:
+        profit_gap_pct = profit_gap / top1_metrics['profit'] * 100
+    elif target_metrics['profit'] > 0:
+        profit_gap_pct = profit_gap / target_metrics['profit'] * 100
     else:
         profit_gap_pct = 0
     report.append(f"- **Net profit gap**: ${profit_gap/1000:.0f}k ({profit_gap_pct:.1f}% behind)\n")
 
-    cash_gap = top1_metrics['\u73B0\u91D1'] - target_metrics['\u73B0\u91D1']
-    cash_gap_pct = (cash_gap / top1_metrics['\u73B0\u91D1'] * 100) if top1_metrics['\u73B0\u91D1'] > 0 else 0
+    cash_gap = top1_metrics['cash'] - target_metrics['cash']
+    cash_gap_pct = (cash_gap / top1_metrics['cash'] * 100) if top1_metrics['cash'] > 0 else 0
     report.append(f"- **Cash gap**: ${cash_gap/1000:.0f}k ({cash_gap_pct:.1f}% behind)\n")
+
+    ebitda_gap = top1_metrics['ebitda'] - target_metrics['ebitda']
+    ebitda_gap_pct = (ebitda_gap / top1_metrics['ebitda'] * 100) if top1_metrics['ebitda'] > 0 else 0
+    report.append(f"- **EBITDA gap**: ${ebitda_gap/1000:.0f}k ({ebitda_gap_pct:.1f}% behind)\n")
 
     # Compare against industry average.
     report.append("\n### 3.2 Comparison vs Industry Average\n")
 
     import numpy as np
-    avg_sales = np.mean([all_teams_metrics[t]['\u9500\u552E\u989D'] for t in teams])
-    avg_profit = np.mean([all_teams_metrics[t]['\u51C0\u5229\u6DA6'] for t in teams])
-    avg_cash = np.mean([all_teams_metrics[t]['\u73B0\u91D1'] for t in teams])
+    avg_sales  = np.mean([all_teams_metrics[t]['sales']  for t in teams])
+    avg_profit = np.mean([all_teams_metrics[t]['profit'] for t in teams])
+    avg_cash   = np.mean([all_teams_metrics[t]['cash']   for t in teams])
+    avg_ebitda = np.mean([all_teams_metrics[t]['ebitda'] for t in teams])
 
-    sales_vs_avg = ((target_metrics['\u9500\u552E\u989D'] - avg_sales) / avg_sales * 100) if avg_sales > 0 else 0
-    # If avg profit is positive, use average as baseline; otherwise use target.
-    if avg_profit > 0:
-        profit_vs_avg = ((target_metrics['\u51C0\u5229\u6DA6'] - avg_profit) / avg_profit * 100)
-    elif target_metrics['\u51C0\u5229\u6DA6'] > 0:
-        profit_vs_avg = ((target_metrics['\u51C0\u5229\u6DA6'] - avg_profit) / target_metrics['\u51C0\u5229\u6DA6'] * 100)
-    else:
-        profit_vs_avg = 0
-    cash_vs_avg = ((target_metrics['\u73B0\u91D1'] - avg_cash) / avg_cash * 100) if avg_cash > 0 else 0
+    def _vs_avg(val, avg):
+        if avg != 0:
+            return (val - avg) / abs(avg) * 100
+        return 0
 
-    report.append(f"- **Sales**: ${target_metrics['\u9500\u552E\u989D']/1000:.0f}k (industry avg: ${avg_sales/1000:.0f}k, {sales_vs_avg:+.1f}%)\n")
-    report.append(f"- **Net profit**: ${target_metrics['\u51C0\u5229\u6DA6']/1000:.0f}k (industry avg: ${avg_profit/1000:.0f}k, {profit_vs_avg:+.1f}%)\n")
-    report.append(f"- **Cash**: ${target_metrics['\u73B0\u91D1']/1000:.0f}k (industry avg: ${avg_cash/1000:.0f}k, {cash_vs_avg:+.1f}%)\n")
+    report.append(f"- **Sales**: ${target_metrics['sales']/1000:.0f}k (industry avg: ${avg_sales/1000:.0f}k, {_vs_avg(target_metrics['sales'], avg_sales):+.1f}%)\n")
+    report.append(f"- **Net profit**: ${target_metrics['profit']/1000:.0f}k (industry avg: ${avg_profit/1000:.0f}k, {_vs_avg(target_metrics['profit'], avg_profit):+.1f}%)\n")
+    report.append(f"- **Cash**: ${target_metrics['cash']/1000:.0f}k (industry avg: ${avg_cash/1000:.0f}k, {_vs_avg(target_metrics['cash'], avg_cash):+.1f}%)\n")
+    report.append(f"- **EBITDA**: ${target_metrics['ebitda']/1000:.0f}k (industry avg: ${avg_ebitda/1000:.0f}k, {_vs_avg(target_metrics['ebitda'], avg_ebitda):+.1f}%)\n")
 
     # Section 4: multi-round trend comparison.
     report.append("\n## 4. Multi-Round Trend Comparison\n")
 
-    rounds_order = ['ir00', 'pr01', 'pr02', 'pr03', 'pr04', 'pr05']
+    rounds_order = ['ir00', 'pr01', 'pr02', 'pr03', 'pr04', 'pr05', 'pr06', 'pr07', 'pr08', 'pr09']
     available_rounds = [r for r in rounds_order if r in all_rounds_data]
 
     if len(available_rounds) > 1:
@@ -270,47 +287,41 @@ def generate_gap_analysis(target_team, input_dir, output_dir):
         report.append("| Team | " + " | ".join([r.upper() for r in available_rounds]) + " |")
         report.append("|------|" + "|".join(["------" for _ in available_rounds]) + "|")
 
-        # Show target + top 3 teams.
         display_teams = [target_team] + top3_teams
         for team in display_teams:
             values = []
             for rnd in available_rounds:
-                if rnd in all_rounds_data:
-                    metrics = all_rounds_data[rnd]['metrics']
-                    sales = get_metric_with_priority(metrics, '\u9500\u552E\u989D', team) or 0
-                    values.append(f"${sales/1000:.0f}k")
-                else:
-                    values.append("N/A")
+                rnd_metrics = all_rounds_data[rnd]['metrics']
+                s = get_metric_with_priority(rnd_metrics, 'Sales revenue', team) or 0
+                values.append(f"${s/1000:.0f}k")
             report.append(f"| {team} | " + " | ".join(values) + " |")
 
     # Section 5: recommendations.
     report.append("\n## 5. Recommendations\n")
-
     report.append("### 5.1 Priority Improvement Areas\n")
 
-    # Suggestions based on diagnosed gaps.
     if sales_rank > 3:
-        report.append(f"1. Increase sales: currently ranked #{sales_rank}; approximately ${sales_gap/1000:.0f}k is needed to match #1\n")
-    
-    if target_metrics['EBITDA\u7387'] and target_metrics['EBITDA\u7387'] < 20:
-        report.append("2. Improve profitability: EBITDA margin is low; optimize cost structure and/or pricing\n")
-    
-    if target_metrics['\u73B0\u91D1'] < 300000:
+        report.append(f"1. Increase sales: currently ranked #{sales_rank}; ~${sales_gap/1000:.0f}k needed to match #1\n")
+    if target_metrics['ebitda_rate'] is not None and target_metrics['ebitda_rate'] < 20:
+        report.append("2. Improve profitability: EBITDA margin below 20%; review cost structure and pricing\n")
+    if target_metrics['cash'] < 300000:
         report.append("3. Increase cash reserve: maintain a larger liquidity buffer\n")
-    
-    if target_metrics['\u51C0\u503A\u52A1\u6743\u76CA\u6BD4'] and target_metrics['\u51C0\u503A\u52A1\u6743\u76CA\u6BD4'] > 30:
-        report.append("4. Rebalance debt structure: reduce debt load or strengthen equity base\n")
+    if target_metrics['debt_equity_ratio'] is not None and target_metrics['debt_equity_ratio'] > 70:
+        report.append("4. Rebalance debt: net debt/equity > 70%; reduce debt or strengthen equity\n")
+    if target_metrics['equity_ratio'] is not None and target_metrics['equity_ratio'] < 40:
+        report.append("5. Equity ratio below 40%; consider debt reduction or equity issuance\n")
 
     report.append("\n### 5.2 Benchmark Teams to Learn From\n")
-    report.append(f"- **Sales benchmark**: {top1_team} (${top1_metrics['\u9500\u552E\u989D']/1000:.0f}k)\n")
+    report.append(f"- **Sales benchmark**: {top1_team} (${top1_metrics['sales']/1000:.0f}k)\n")
 
-    # Team with highest profit.
-    profit_leader = max(teams, key=lambda t: all_teams_metrics[t]['\u51C0\u5229\u6DA6'])
-    report.append(f"- **Profit benchmark**: {profit_leader} (net profit ${all_teams_metrics[profit_leader]['\u51C0\u5229\u6DA6']/1000:.0f}k)\n")
+    profit_leader = max(teams, key=lambda t: all_teams_metrics[t]['profit'])
+    report.append(f"- **Profit benchmark**: {profit_leader} (net profit ${all_teams_metrics[profit_leader]['profit']/1000:.0f}k)\n")
 
-    # Team with strongest cash position.
-    cash_leader = max(teams, key=lambda t: all_teams_metrics[t]['\u73B0\u91D1'])
-    report.append(f"- **Cash management benchmark**: {cash_leader} (cash ${all_teams_metrics[cash_leader]['\u73B0\u91D1']/1000:.0f}k)\n")
+    cash_leader = max(teams, key=lambda t: all_teams_metrics[t]['cash'])
+    report.append(f"- **Cash management benchmark**: {cash_leader} (cash ${all_teams_metrics[cash_leader]['cash']/1000:.0f}k)\n")
+
+    ebitda_leader = max(teams, key=lambda t: all_teams_metrics[t]['ebitda'])
+    report.append(f"- **EBITDA benchmark**: {ebitda_leader} (${all_teams_metrics[ebitda_leader]['ebitda']/1000:.0f}k)\n")
 
     # Save report.
     report_text = "\n".join(report)

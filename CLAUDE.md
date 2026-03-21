@@ -24,10 +24,10 @@ python scripts/analyze_comprehensive_v3.py --input-dir ../results --output-dir .
 python scripts/generate_all_team_reports.py --input-dir ../results --output-dir ../analysis
 
 # Gap analysis for a specific team
-python scripts/generate_gap_analysis.py --target-team "Blue" --input-dir ../results --output-dir ../analysis
+python scripts/generate_gap_analysis.py --team "Blue" --input-dir ../results --output-dir ../analysis
 
 # Single team deep-dive
-python scripts/analyze_team_detail.py --team-name "Blue" --input-dir ../results --output-dir ../analysis
+python scripts/analyze_team_detail.py --team "Blue" --input-dir ../results --output-dir ../analysis
 ```
 
 No formal test suite exists. No `requirements.txt` — dependencies are `pandas` and `numpy`.
@@ -80,8 +80,8 @@ When the user says **"run round N"** (or similar), execute this full flow:
 4. **Bash**: run analysis scripts from `cesimAnalyze/`:
    ```bash
    uv run python cesimAnalyze/scripts/analyze_comprehensive_v3.py --input-dir results --output-dir analysis
-   uv run python cesimAnalyze/scripts/analyze_team_detail.py --team-name "$CESIM_TEAM" --input-dir results --output-dir analysis
-   uv run python cesimAnalyze/scripts/generate_gap_analysis.py --target-team "$CESIM_TEAM" --input-dir results --output-dir analysis
+   uv run python cesimAnalyze/scripts/analyze_team_detail.py --team "$CESIM_TEAM" --input-dir results --output-dir analysis
+   uv run python cesimAnalyze/scripts/generate_gap_analysis.py --team "$CESIM_TEAM" --input-dir results --output-dir analysis
    ```
 5. **Playwright**: navigate to each decision page (demand, production, pricing, marketing, R&D, logistics, tax, finance) → extract all editable field names and current values. No MHTML export needed.
 6. **Claude**: generate the full decision plan using the loaded prompts and analysis reports.

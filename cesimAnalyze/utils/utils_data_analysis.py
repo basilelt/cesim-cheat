@@ -43,7 +43,7 @@ def read_excel_data(file_path, team_row_idx=4, data_start_row=5):
             continue
 
         # Detect section header rows.
-        if '\u635F\u76CA\u8868' in indicator or '\u8D44\u4EA7\u8D1F\u503A\u8868' in indicator:
+        if any(header in indicator for header in ['\u635F\u76CA\u8868', '\u8D44\u4EA7\u8D1F\u503A\u8868', 'Income Statement', 'Income statement', 'Balance Sheet', 'Balance sheet']):
             current_section = indicator
             continue
 
@@ -82,7 +82,7 @@ def read_excel_data(file_path, team_row_idx=4, data_start_row=5):
                                 existing_data[team] = new_val
                         else:
                             # For other metrics, prefer values in a global section.
-                            if current_section and '\u5168\u7403' in current_section:
+                            if current_section and any(g in current_section for g in ['\u5168\u7403', 'Global', 'Total']):
                                 existing_data[team] = new_val
                     elif new_val is not None:
                         existing_data[team] = new_val
@@ -257,7 +257,7 @@ def get_metric_value(metrics_dict, metric_name, team_name):
                                 continue
 
                         priority = 0
-                        if '\u5168\u7403' in str(key) or '\u603B\u8BA1' in str(key):
+                        if any(g in str(key) for g in ['\u5168\u7403', '\u603B\u8BA1', 'Global', 'Total']):
                             priority = 3
                         elif any(region in str(key) for region in ['\u7F8E\u56FD', '\u4E9A\u6D32', '\u6B27\u6D32', 'America', 'Asia', 'Europe']):
                             priority = 1
@@ -283,14 +283,14 @@ def get_metric_value(metrics_dict, metric_name, team_name):
                     continue
 
                 priority = 0
-                if '\u5168\u7403' in str(key) or '\u603B\u8BA1' in str(key):
+                if any(g in str(key) for g in ['\u5168\u7403', '\u603B\u8BA1', 'Global', 'Total']):
                     priority = 2
                 elif any(region in str(key) for region in ['\u7F8E\u56FD', '\u4E9A\u6D32', '\u6B27\u6D32', 'America', 'Asia', 'Europe']):
                     priority = 1
                 all_matches.append((priority, val, str(key)))
 
     if all_matches:
-        all_matches.sort(key=lambda x: (-x[0], abs(x[1])), reverse=True)
+        all_matches.sort(key=lambda x: (-x[0], -abs(x[1])))
         return all_matches[0][1]
     return None
 
