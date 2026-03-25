@@ -18,19 +18,19 @@ Python toolkit for analyzing Cesim business simulation results and generating st
 
 ```bash
 # Comprehensive analysis (primary entry point)
-python scripts/analyze_comprehensive_v3.py --input-dir ../results --output-dir ../analysis
+uv run python scripts/analyze_comprehensive_v3.py --input-dir ../results --output-dir ../analysis
 
 # Generate detailed reports for all teams
-python scripts/generate_all_team_reports.py --input-dir ../results --output-dir ../analysis
+uv run python scripts/generate_all_team_reports.py --input-dir ../results --output-dir ../analysis
 
 # Gap analysis for a specific team
-python scripts/generate_gap_analysis.py --team "Blue" --input-dir ../results --output-dir ../analysis
+uv run python scripts/generate_gap_analysis.py --team "Blue" --input-dir ../results --output-dir ../analysis
 
 # Single team deep-dive
-python scripts/analyze_team_detail.py --team "Blue" --input-dir ../results --output-dir ../analysis
+uv run python scripts/analyze_team_detail.py --team "Blue" --input-dir ../results --output-dir ../analysis
 ```
 
-No formal test suite exists. No `requirements.txt` — dependencies are `pandas` and `numpy`.
+No formal test suite exists. Dependencies are declared in `cesimAnalyze/pyproject.toml` and managed by uv — no venv activation needed, just use `uv run python`.
 
 ## Architecture
 

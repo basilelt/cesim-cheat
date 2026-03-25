@@ -18,21 +18,8 @@ This guide covers the end-to-end workflow for one simulation round: downloading 
 
 ## Installation
 
-From the `cesimAnalyze/` directory:
+No setup needed. Dependencies are declared in `cesimAnalyze/pyproject.toml`. Just prefix commands with `uv run` and uv handles everything automatically:
 
-```bash
-uv venv
-uv sync
-```
-
-This creates a `.venv/` and installs `pandas`, `numpy`, and `xlrd` (required for `.xls` files).
-
-**Activate the environment** (optional — needed if calling `python` directly):
-```bash
-source .venv/bin/activate
-```
-
-**Or skip activation** and prefix commands with `uv run`:
 ```bash
 uv run python scripts/analyze_comprehensive_v3.py --input-dir ../results --output-dir ../analysis
 ```
@@ -123,7 +110,7 @@ The scripts auto-detect all files matching these patterns, so no renaming is nee
 From the `cesimAnalyze/` directory:
 
 ```bash
-python scripts/analyze_comprehensive_v3.py \
+uv run python scripts/analyze_comprehensive_v3.py \
   --input-dir ../results \
   --output-dir ../analysis
 ```
@@ -204,7 +191,7 @@ Run these before Step 4 if you want richer input for the decision plan.
 
 **Single-team cross-round comparison:**
 ```bash
-python scripts/analyze_team_detail.py \
+uv run python scripts/analyze_team_detail.py \
   --team-name "Blue" \
   --input-dir ../results \
   --output-dir ../analysis
@@ -212,7 +199,7 @@ python scripts/analyze_team_detail.py \
 
 **Peer comparison and gap metrics for one team:**
 ```bash
-python scripts/generate_gap_analysis.py \
+uv run python scripts/generate_gap_analysis.py \
   --target-team "Blue" \
   --input-dir ../results \
   --output-dir ../analysis
@@ -220,7 +207,7 @@ python scripts/generate_gap_analysis.py \
 
 **Batch reports for all teams:**
 ```bash
-python scripts/generate_all_team_reports.py \
+uv run python scripts/generate_all_team_reports.py \
   --input-dir ../results \
   --output-dir ../analysis
 ```
