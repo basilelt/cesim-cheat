@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 @cesimAnalyze/docs/methodology/results_analysis_method.md
 @cesimAnalyze/docs/prompts/decision_making_prompt.md
 @cesimAnalyze/docs/prompts/mhtml_page_parsing_prompt.md
+@cesimAnalyze/docs/prompts/round_report_prompt.md
+@cesimAnalyze/docs/prompts/presentation_prompt.md
 @case_company.md
 @decision_making.md
 
@@ -88,8 +90,67 @@ When the user says **"run round N"** (or similar), execute this full flow:
 7. **PAUSE**: present the plan to the user and ask for approval or edits. Do not proceed to submission without explicit user confirmation.
 8. **Playwright**: fill approved values into each decision page → submit.
 
+### Routine: "export all rounds"
+
+When the user says **"export all rounds"** (or similar), run:
+
+```bash
+export $(cat .env | grep -v '#' | xargs) && node scripts/export_all_rounds.js
+```
+
+This will:
+1. Login to Cesim once.
+2. Detect all available past rounds via the round selector on the Results page.
+3. For each round: download the Excel + extract decision pages + market outlook + Results sub-panels.
+4. Skip rounds already exported (idempotent). Use `--force` to re-export.
+5. Save to `results/results-prNN.xls` and `decisions/roundN_*.json`.
+
+To export a specific range: `node scripts/export_all_rounds.js --from 3 --to 5`
+
+### Routine: "build all round reports"
+
+When the user says **"build all round reports"** (or similar):
+
+1. **Bash**: build dossiers for all detected rounds:
+   ```bash
+   uv run python cesimAnalyze/scripts/build_round_dossier.py --all
+   ```
+2. **Bash**: run the standard analyzers on all available Excels:
+   ```bash
+   uv run python cesimAnalyze/scripts/analyze_comprehensive_v3.py --input-dir results --output-dir analysis
+   uv run python cesimAnalyze/scripts/generate_gap_analysis.py --team "$CESIM_TEAM" --input-dir results --output-dir analysis
+   uv run python cesimAnalyze/scripts/analyze_team_detail.py --team "$CESIM_TEAM" --input-dir results --output-dir analysis
+   ```
+3. **Claude**: for each round N that has `analysis/roundN_inputs.md` but no `analysis/roundN_full_report.md`, read both the dossier and the round report prompt and write the full report:
+   - Load: `@analysis/roundN_inputs.md` + `@cesimAnalyze/docs/prompts/round_report_prompt.md`
+   - Output: `analysis/roundN_full_report.md`
+4. Confirm completion round by round before moving to next.
+
+### Routine: "build presentation"
+
+When the user says **"build presentation"** (or similar):
+
+1. Verify `analysis/round{N}_full_report.md` exists for each round (run "build all round reports" first if missing).
+2. **Claude**: read all per-round full reports + comprehensive analysis + `case_company.md` + `presentation/template.md` + `cesimAnalyze/docs/prompts/presentation_prompt.md`.
+3. **Claude**: write `presentation/cesim_journey.md` (~30 slides, Marp format, following the presentation prompt structure).
+4. **Bash**: render slides:
+   ```bash
+   npm run slides:html   # fast render for preview
+   npm run slides:pdf    # final PDF for submission
+   ```
+5. **PAUSE**: show the user the output path (`presentation/build/cesim_journey.html`). Ask for review before declaring done.
+
+### Routine: "do the full debrief"
+
+When the user says **"do the full debrief"** (or similar), chain all three routines in order:
+1. "export all rounds"
+2. "build all round reports"
+3. "build presentation"
+
 ### Notes
 
 - The MHTML manual export workflow (old Steps 3–4) is superseded by live browser reading via Playwright. MHTML files are no longer needed.
 - Always pause before submitting decisions — the user must review and approve first.
 - Run scripts from the `cesim/` root directory (not from `cesimAnalyze/`).
+- Round report generation is per-round: if a round's `full_report.md` already exists, skip it unless the user says "rebuild".
+- Marp renders the presentation via `npx` — no global install needed. First run may be slow (download).

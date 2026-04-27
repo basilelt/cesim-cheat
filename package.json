@@ -1,5 +1,12 @@
 {
   "private": true,
+  "scripts": {
+    "export:all": "node scripts/export_all_rounds.js",
+    "export:round": "node scripts/cesim_round.js",
+    "slides:html": "npx -y @marp-team/marp-cli presentation/cesim_journey.md --html --allow-local-files --output presentation/build/cesim_journey.html",
+    "slides:pdf": "npx -y @marp-team/marp-cli presentation/cesim_journey.md --html --pdf --allow-local-files --output presentation/build/cesim_journey.pdf",
+    "slides": "npm run slides:html && npm run slides:pdf"
+  },
   "dependencies": {
     "playwright": "^1.52.0"
   }

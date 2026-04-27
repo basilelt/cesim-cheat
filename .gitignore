@@ -7,3 +7,5 @@ node_modules/
 *.png
 decisions/
 .claude/settings.local.json
+presentation/build/
+scripts/.errors/
