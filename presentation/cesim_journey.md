@@ -430,7 +430,7 @@ CA remonte à $1.10B (+9.8%) mais la structure bilantielle continue de se dégra
 | EBITDA % | 39.83% → **35.00%** | 🟡 érosion |
 | Ratio fonds propres % | 32.07% → **26.37%** | 🔴 zone critique |
 | Notation crédit | B+ → **B−** | 🔴 dégradation |
-| TSR cumulé % | — → **−4.10%** | 🔴 valeur détruite |
+| TSR cumulé % | — → **−10.20%** | 🔴 valeur détruite |
 
 **Paradoxe R5 :** le CA progresse (+9.8%) mais le résultat net repart en perte (−$73M). Mécanisme : les charges financières sur la dette accumulée (intérêts + amortissements) absorbent les gains opérationnels avant qu'ils atteignent la ligne nette. L'EBITDA est sain mais le bilan est malade.
 
@@ -654,7 +654,7 @@ Pari massif sur la croissance des volumes depuis une position d'insolvabilité p
 <div style="display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:0; border:2px solid #1a56db; border-radius:10px; overflow:hidden; font-size:0.81em; height:360px;">
   <div style="padding:18px 22px; background:#f0fdf4; border-right:2px solid #1a56db; border-bottom:2px solid #1a56db; display:flex; flex-direction:column; gap:8px;">
     <div style="font-weight:800; color:#065f46; font-size:1em; padding-bottom:6px; border-bottom:1px solid #86efac;">🏆 LEADERS — Agressifs & Rentables</div>
-    <div><strong>Landsvæðisútþensla</strong><br><span style="color:#6b7280;font-size:0.88em;">TSR +107%+ · CA $14B · leader absolu</span></div>
+    <div><strong>Landsvæðisútþensla</strong><br><span style="color:#6b7280;font-size:0.88em;">TSR +35.4% (R8) · CA $10.4B (R8) · leader absolu</span></div>
     <div><strong>The Big Five</strong><br><span style="color:#6b7280;font-size:0.88em;">Croissance maîtrisée · bilan solide</span></div>
     <div><strong>Alternants skieurs</strong><br><span style="color:#6b7280;font-size:0.88em;">Top 3 stable · TSR +50%</span></div>
   </div>
@@ -718,14 +718,14 @@ Pari massif sur la croissance des volumes depuis une position d'insolvabilité p
   <td style="padding:7px 12px;"><span style="background:#fed7aa;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:700;font-size:0.9em;">Défensif</span></td>
   <td style="padding:7px 12px;">Restructuration coûts · EBITDA 40% rétabli</td>
   <td style="padding:7px 12px;text-align:right;font-weight:700;color:#92400e;">+$17M</td>
-  <td style="padding:7px 12px;text-align:right;color:#9b1c1c;">$105 (−54%)</td>
+  <td style="padding:7px 12px;text-align:right;color:#9b1c1c;">$105 (−53%)</td>
 </tr>
 <tr style="background:#eff6ff;">
   <td style="padding:7px 12px;font-weight:700;">R5</td>
   <td style="padding:7px 12px;"><span style="background:#bfdbfe;color:#1e40af;padding:2px 8px;border-radius:10px;font-weight:700;font-size:0.9em;">Équilibré</span></td>
   <td style="padding:7px 12px;">CA +9.8% · FP 26.37% · B− crédit</td>
   <td style="padding:7px 12px;text-align:right;font-weight:700;color:#9b1c1c;">−$73M</td>
-  <td style="padding:7px 12px;text-align:right;color:#9b1c1c;">TSR −4.1%</td>
+  <td style="padding:7px 12px;text-align:right;color:#9b1c1c;">TSR −10.2%</td>
 </tr>
 <tr style="background:#eff6ff;">
   <td style="padding:7px 12px;font-weight:700;">R6</td>
